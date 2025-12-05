@@ -1,6 +1,7 @@
 import express from "express";
 import {
   addVendorToRfp,
+  compareVendors,
   createRfp,
   deleteRfp,
   getRfp,
@@ -23,5 +24,7 @@ router.post("/:id/add-vendor/:vendorId", addVendorToRfp);
 router.get("/:id/proposals", getProposalsByRfp);
 
 router.post("/:id/send", sendRfpToVendors);
+
+router.get("/:id/compare", compareVendors);
 
 export default router;

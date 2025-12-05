@@ -1,123 +1,118 @@
 // utils/extractAttachmentText.js
 import fs from "fs";
-import os from "os";
-import path from "path";
 import mammoth from "mammoth";
-
-let pdfParseLoadPromise = null;
+import PDFParser from "pdf2json";
 
 /**
- * Ensure we load pdf-parse and return the actual parse function.
- * Handles various module shapes across Node/npm versions.
+ * Safely decode a pdf2json text token.
+ * Attempts decodeURIComponent, but falls back to:
+ *  - a best-effort replacement for percent sequences, or
+ *  - the raw token if decode fails.
  */
-async function getPdfParseFunction() {
-  if (!pdfParseLoadPromise) {
-    pdfParseLoadPromise = (async () => {
-      try {
-        const mod = await import("pdf-parse");
-        // Try common locations for the callable
-        if (typeof mod === "function") return mod;
-        if (typeof mod.default === "function") return mod.default;
-        // Some bundlers may wrap differently — try a couple sensible fallbacks
-        if (mod && typeof mod.pdf === "function") return mod.pdf;
-        if (mod && typeof mod.parse === "function") return mod.parse;
-        // If we reach here, module shape is unexpected — return the module for inspection
-        return mod;
-      } catch (e) {
-        // propagate import error
-        throw e;
-      }
-    })();
+function safeDecodeToken(token) {
+  if (!token || typeof token !== "string") return "";
+  try {
+    // Common case: percent-encoded text
+    return decodeURIComponent(token);
+  } catch (e) {
+    // Token contained malformed percent escapes.
+    // Try a tolerant replacement: replace any % not followed by two hex digits.
+    try {
+      const tolerant = token.replace(/%(?![0-9A-Fa-f]{2})/g, "%25");
+      return decodeURIComponent(tolerant);
+    } catch (e2) {
+      // Last resort: return raw token (it may still be encoded but at least won't crash).
+      return token;
+    }
   }
-  return pdfParseLoadPromise;
-}
-
-function makeTempPath(filename = "attachment") {
-  const name = `${Date.now()}-${(filename || "attachment").replace(
-    /\s+/g,
-    "_"
-  )}`;
-  return path.join(os.tmpdir(), name);
 }
 
 /**
  * Extract text from PDF or DOCX attachments.
- * Supports file.path (disk) OR file.buffer (memory).
+ * Uses pdf2json for PDF extraction and mammoth for DOCX.
  */
 export async function extractAttachmentText(file) {
-  const { path: filePath, mimetype, originalname, buffer } = file;
-  let tmpPath;
-  let wroteTemp = false;
+  const { path, mimetype, originalname } = file;
 
   try {
-    // Prepare local file path
-    if (filePath && typeof filePath === "string") {
-      tmpPath = filePath;
-    } else if (buffer && Buffer.isBuffer(buffer)) {
-      tmpPath = makeTempPath(originalname || "attachment");
-      await fs.promises.writeFile(tmpPath, buffer);
-      wroteTemp = true;
-    } else {
-      // nothing to read
-      return "";
-    }
-
-    // Load pdf-parse and determine callable
-    let pdfParseFunc = await getPdfParseFunction();
-    // If it's not a function yet, try common property names
-    if (typeof pdfParseFunc !== "function") {
-      if (pdfParseFunc?.default && typeof pdfParseFunc.default === "function")
-        pdfParseFunc = pdfParseFunc.default;
-      else if (pdfParseFunc?.pdf && typeof pdfParseFunc.pdf === "function")
-        pdfParseFunc = pdfParseFunc.pdf;
-      else if (pdfParseFunc?.parse && typeof pdfParseFunc.parse === "function")
-        pdfParseFunc = pdfParseFunc.parse;
-    }
-
-    // PDF
+    // -------------------------
+    // PDF extraction using pdf2json
+    // -------------------------
     if (
-      (mimetype && mimetype === "application/pdf") ||
+      mimetype === "application/pdf" ||
       (originalname && originalname.toLowerCase().endsWith(".pdf"))
     ) {
-      if (!pdfParseFunc) {
-        // helpful error message for debugging module shape
-        console.error(
-          "pdf-parse loaded but no callable function found. Module shape:",
-          pdfMod
-        );
-        throw new Error(
-          "pdf-parse parsing function not found. See server logs for module shape."
-        );
-      }
-      const fileBuffer = await fs.promises.readFile(tmpPath);
-      const data = await pdfParseFunc(fileBuffer);
-      return data?.text || "";
+      const pdfParser = new PDFParser();
+
+      return await new Promise((resolve, reject) => {
+        let aggregated = "";
+
+        pdfParser.on("pdfParser_dataError", (err) => {
+          // Log and resolve empty rather than reject to avoid crashing webhook handling
+          console.error("PDF parse error:", err);
+          resolve("");
+        });
+
+        pdfParser.on("pdfParser_dataReady", (pdfData) => {
+          try {
+            if (!pdfData || !pdfData.Pages) {
+              return resolve("");
+            }
+
+            pdfData.Pages.forEach((page) => {
+              if (!page.Texts) return;
+              page.Texts.forEach((t) => {
+                // t.R is an array of text runs
+                if (!Array.isArray(t.R)) return;
+                t.R.forEach((r) => {
+                  // r.T may be percent-encoded or plain. Use safe decoder.
+                  const token = r && r.T ? safeDecodeToken(r.T) : "";
+                  // Append token + a space to separate words; keep newlines per text object
+                  aggregated += token + " ";
+                });
+                // small separator per text object to preserve rough structure
+                aggregated += "\n";
+              });
+            });
+
+            // Normalize whitespace and return
+            const cleaned = aggregated
+              .replace(/[ \t]+/g, " ")
+              .replace(/\n{2,}/g, "\n")
+              .trim();
+            resolve(cleaned);
+          } catch (e) {
+            console.error("Error processing pdf2json output:", e);
+            resolve("");
+          }
+        });
+
+        // start parsing (path must be a filesystem path)
+        try {
+          pdfParser.loadPDF(path);
+        } catch (e) {
+          console.error("pdfParser.loadPDF error:", e);
+          resolve("");
+        }
+      });
     }
 
-    // DOCX
+    // -------------------------
+    // DOCX extraction via mammoth
+    // -------------------------
     if (
-      (mimetype &&
-        mimetype ===
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document") ||
+      mimetype ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
       (originalname && originalname.toLowerCase().endsWith(".docx"))
     ) {
-      const result = await mammoth.extractRawText({ path: tmpPath });
-      return result?.value || "";
+      const result = await mammoth.extractRawText({ path });
+      return result.value || "";
     }
 
-    // Unsupported
+    // Unsupported formats
     return "";
   } catch (err) {
     console.error("Attachment parse error:", err);
     return "";
-  } finally {
-    // cleanup temp file if we wrote one
-    if (wroteTemp && tmpPath) {
-      try {
-        await fs.promises.unlink(tmpPath);
-      } catch (e) {
-        // ignore cleanup error
-      }
-    }
   }
 }

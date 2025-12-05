@@ -1,4 +1,6 @@
+import Proposal from "../models/Proposal.js";
 import Rfp from "../models/rfp.js";
+import { compareVendorsWithAI } from "../utils/compareVendorsAi.js";
 import { rfpSchema } from "../validation/rfpValidation.js";
 
 export const createRfp = async (req, res) => {
@@ -129,5 +131,36 @@ export const addVendorToRfp = async (req, res) => {
   } catch (err) {
     console.error("addVendorToRfp error:", err);
     return res.status(500).json({ error: "Internal Server error" });
+  }
+};
+
+export const compareVendors = async (req, res) => {
+  try {
+    const rfpId = req.params.id;
+
+    const rfp = await Rfp.findById(rfpId);
+    if (!rfp) return res.status(404).json({ error: "RFP not found" });
+
+    const proposals = await Proposal.find({ rfp: rfpId }).populate(
+      "vendor",
+      "name email"
+    );
+
+    if (proposals.length === 0) {
+      return res
+        .status(400)
+        .json({ error: "No vendor proposals found for this RFP" });
+    }
+
+    const aiResult = await compareVendorsWithAI(rfp, proposals);
+
+    return res.json({
+      rfpId,
+      vendorCount: proposals.length,
+      ...aiResult,
+    });
+  } catch (err) {
+    console.error("Compare vendors error:", err);
+    res.status(500).json({ error: "Failed to compare vendors" });
   }
 };
