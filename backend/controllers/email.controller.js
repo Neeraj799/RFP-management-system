@@ -151,9 +151,13 @@ export const sendRfpToVendors = async (req, res) => {
       const mailOptions = {
         from: process.env.EMAIL_FROM || process.env.SMTP_USER,
         to: v.email,
-        subject,
+        subject: `${subject} (RFP ID: ${rfpId})`,
         html: htmlBody,
-        attachments: attachmentsForEmail, // if empty, nodemailer ignores
+        attachments: attachmentsForEmail,
+        headers: {
+          "X-Mailgun-Variables": JSON.stringify({ rfpId: String(rfpId) }),
+          "X-RFP-ID": String(rfpId),
+        },
       };
 
       try {
