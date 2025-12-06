@@ -1,4 +1,3 @@
-// backend/controllers/aiController.js
 import axios from "axios";
 import Rfp from "../models/rfp.js";
 

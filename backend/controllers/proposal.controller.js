@@ -4,7 +4,10 @@ import { proposalSchema } from "../validation/proposalValidation.js";
 export const createProposal = async (req, res) => {
   try {
     const { error } = proposalSchema.validate(req.body);
-    if (error) return res.status(400).json({ error: error.details[0].message });
+    if (error)
+      return res
+        .status(400)
+        .json({ success: false, error: error.details[0].message });
 
     const {
       rfp,
@@ -35,10 +38,12 @@ export const createProposal = async (req, res) => {
     const saved = await newProposal.save();
     return res
       .status(201)
-      .json({ message: "Proposal created", proposal: saved });
+      .json({ success: true, message: "Proposal created", proposal: saved });
   } catch (err) {
     console.error("createProposal error:", err);
-    return res.status(500).json({ error: "Internal Server error" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal Server error" });
   }
 };
 
@@ -51,10 +56,16 @@ export const listProposals = async (req, res) => {
     const list = await Proposal.find(filter)
       .sort({ createdAt: -1 })
       .populate("vendor rfp");
-    return res.json({ message: "Proposals fetched", proposals: list });
+    return res.json({
+      success: true,
+      message: "Proposals fetched",
+      proposals: list,
+    });
   } catch (err) {
     console.error("listProposals error:", err);
-    return res.status(500).json({ error: "Internal Server error" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal Server error" });
   }
 };
 
@@ -66,10 +77,16 @@ export const getProposalsByRfp = async (req, res) => {
       .sort({ createdAt: -1 })
       .populate("vendor rfp");
 
-    return res.json({ message: "Proposals for RFP fetched", proposals: list });
+    return res.json({
+      success: true,
+      message: "Proposals for RFP fetched",
+      proposals: list,
+    });
   } catch (err) {
     console.error("getProposalsByRfp error:", err);
-    return res.status(500).json({ error: "Internal Server error" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal Server error" });
   }
 };
 
@@ -80,10 +97,16 @@ export const getProposal = async (req, res) => {
     if (!proposal) {
       return res.status(404).json({ error: "Proposal not found" });
     }
-    return res.json({ message: "Proposal fetched", proposal: proposal });
+    return res.json({
+      success: true,
+      message: "Proposal fetched",
+      proposal: proposal,
+    });
   } catch (err) {
     console.error("getProposal error:", err);
-    return res.status(500).json({ error: "Internal Server error" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal Server error" });
   }
 };
 
@@ -94,28 +117,45 @@ export const updateProposal = async (req, res) => {
       presence: "optional",
     });
     if (error) {
-      return res.status(400).json({ error: error.details[0].message });
+      return res
+        .status(400)
+        .json({ success: false, error: error.details[0].message });
     }
     const updated = await Proposal.findByIdAndUpdate(id, req.body, {
       new: true,
     }).populate("vendor rfp");
     if (!updated) {
-      return res.status(404).json({ error: "Proposal not found" });
+      return res
+        .status(404)
+        .json({ success: false, error: "Proposal not found" });
     }
-    return res.json({ message: "Proposal updated", proposal: updated });
+    return res.json({
+      success: true,
+      message: "Proposal updated",
+      proposal: updated,
+    });
   } catch (err) {
     console.error("updateProposal error:", err);
-    return res.status(500).json({ error: "Internal Server error" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal Server error" });
   }
 };
 
 export const deleteProposal = async (req, res) => {
   try {
     const { id } = req.params;
-    await Proposal.findByIdAndDelete(id);
-    return res.json({ message: "Proposal deleted" });
+    const deleted = await Proposal.findByIdAndDelete(id);
+    if (!deleted) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Proposal not found" });
+    }
+    return res.json({ success: true, message: "Proposal deleted" });
   } catch (err) {
     console.error("deleteProposal error:", err);
-    return res.status(500).json({ error: "Internal Server error" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal Server error" });
   }
 };
