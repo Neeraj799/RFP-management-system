@@ -3,29 +3,34 @@ import { Link } from "react-router-dom";
 
 const Navbar = () => {
   return (
-    <div className="bg-gray-800 p-4 text-white shadow-md">
-      <div className="mx-w-6xl mx-auto flex justify-between items-center">
-        <Link to="/" className="text-xl font-bold">
-          RFP MANAGEMENT SYSTEM
-        </Link>
+    <nav className="bg-white shadow-md">
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="flex items-center justify-between h-16">
+          <Link
+            to="/"
+            className="text-lg sm:text-xl font-semibold tracking-wide text-gray-900 hover:text-indigo-600 transition-colors"
+          >
+            RFP MANAGEMENT SYSTEM
+          </Link>
 
-        <div className="flex gap-4 items-center">
-          <>
-            <Link to="/" className="hover:text-gray-300 rounded shadow-lg">
+          <div className="flex items-center gap-4">
+            <Link
+              to="/"
+              className="px-3 py-1.5 rounded-md text-sm text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition"
+            >
               Home
             </Link>
 
-            <Link to="/create-rfp" className="hover:text-gray-300">
+            <Link
+              to="/create-rfp"
+              className="px-3 py-1.5 rounded-md text-sm text-gray-700 hover:text-white hover:bg-indigo-600 transition"
+            >
               Create RFP
             </Link>
-
-            <Link to="/vendors" className="hover:text-gray-300">
-              Create RFP
-            </Link>
-          </>
+          </div>
         </div>
       </div>
-    </div>
+    </nav>
   );
 };
 
