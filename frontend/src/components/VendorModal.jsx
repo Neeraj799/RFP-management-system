@@ -5,7 +5,6 @@ const VendorModal = ({ open, onClose, vendor }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex" aria-modal="true" role="dialog">
-      {/* Transparent backdrop (click to close) */}
       <div
         className="fixed inset-0 bg-transparent"
         onClick={onClose}

@@ -2,16 +2,6 @@ import React, { useEffect, useState } from "react";
 import api from "../services/api";
 import { toast } from "react-toastify";
 
-/**
- * Defensive CompareVendorsModal
- * Accepts backend shapes like:
- * - { summary, comparisonTable, recommendation }
- * - { comparisons, recommendedProposalId, explain }
- *
- * Props:
- * - open, onClose, rfpId
- * - onOpenProposal(proposalId) optional callback to open a proposal in parent
- */
 const CompareVendorsModal = ({
   open,
   onClose,
