@@ -1,4 +1,4 @@
-import Proposal from "../models/Proposal.js";
+import Proposal from "../models/proposal.js";
 import Vendor from "../models/vendor.js";
 import axios from "axios";
 import { extractAttachmentText } from "../utils/extractAttachmentText.js";
