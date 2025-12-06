@@ -1,137 +1,80 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import { useState } from "react";
-import { toast } from "react-toastify";
 import { useEffect } from "react";
-import EditTodoModal from "../components/EditTodoModal";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../services/api";
+import { toast } from "react-toastify";
 
 const Home = () => {
-  const [todos, setTodos] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedTodo, setSelectedTodo] = useState(null);
+  const [rfps, setRfps] = useState([]);
+  const [loading, setLoading] = useState();
 
-  const handleEdit = (todo) => {
-    setSelectedTodo(todo);
-    setIsModalOpen(true);
-  };
-
-  const fetchTodos = async () => {
+  const fetchRfps = async () => {
     try {
-      const res = await api.get("/todos");
+      setLoading(true);
 
-      if (res.data.success) {
-        setTodos(res.data.todos);
-      }
-    } catch (error) {
-      if (error.response && error.response.data) {
-        toast.error(error.response.data.message);
+      const res = await api.get("/rfp");
+
+      if (res.data?.success) {
+        setRfps(res.data.rfps || []);
       } else {
-        toast.error(error?.message);
-      }
-    }
-  };
-
-  const deleteTodo = async (id) => {
-    try {
-      const res = await api.delete(`/todos/delete/${id}`);
-      if (res.data.success) {
-        setTodos(todos.filter((todo) => todo._id !== id));
-        toast.success(res.data.message);
+        toast.error(res.data?.error || "Failed to fetch RFPs");
       }
     } catch (error) {
-      if (error.response && error.response.data) {
-        toast.error(error.response.data.message);
-      } else {
-        toast.error(error.message);
-      }
-    }
-  };
-
-  const toggleCompleted = async (todo) => {
-    try {
-      const res = await api.patch(`/todos/update/${todo._id}`, {
-        completed: !todo.completed,
-      });
-
-      if (res.data.success) {
-        setTodos((prev) =>
-          prev.map((t) =>
-            t._id === todo._id ? { ...t, completed: !t.completed } : t
-          )
-        );
-      }
-    } catch (error) {
-      toast.error(error.response.data.message || error.message);
+      const msg =
+        error.response?.data.error || error.message || "Something went wrong";
+      console.error("fetchRfps error:", error);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTodos();
+    fetchRfps();
   }, []);
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-4 text-center">My Todos</h1>
+    <div className="max-w-5xl mx-auto">
+      <div className="flex items-center justify-between my-6">
+        <h1 className="text-2xl font-semibold">RFPs</h1>
 
-      <div className="flex justify-end mb-4">
         <Link
-          to="/add"
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          to="/create-rfp"
+          className="bg-blue-600 text-white px-4 py-2 rounded"
         >
-          + Add Todo
+          New RFP
         </Link>
       </div>
 
-      <div>
-        <ul className="space-y-3">
-          {todos.map((todo) => (
-            <li
-              key={todo._id}
-              className="flex justify-between items-center bg-gray-100 p-3 rounded shadow"
+      {rfps?.length === 0 ? (
+        <div className="p-6 bg-white rounded shadow">
+          No RFPs found. Create one to get started.
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {rfps?.map((r) => (
+            <Link
+              key={r._id}
+              to={`/rfp/${r._id}`}
+              className="block bg-white p-4 rounded shadow hover:shadow-md tarnstion"
             >
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={todo.completed}
-                  onChange={() => toggleCompleted(todo)}
-                />
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-medium text-lg">{r.title || ""}</div>
+                  <div className="font-medium text-lg">
+                    {r.description || ""}
+                  </div>
 
-                <span
-                  className={`${
-                    todo.completed ? "line-through text-gray-500" : ""
-                  }`}
-                >
-                  {todo.title}
-                </span>
+                  <div className="text-sm text-gray-500 mt-1">
+                    {new Date(r.createdAt).toLocaleString()}
+                  </div>
+                </div>
               </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleEdit(todo)}
-                  className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 text-white"
-                >
-                  Edit
-                </button>
-
-                <button
-                  onClick={() => deleteTodo(todo._id)}
-                  className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
+            </Link>
           ))}
-        </ul>
-      </div>
-
-      <EditTodoModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        todo={selectedTodo}
-        refreshTodos={fetchTodos}
-      />
+        </div>
+      )}
     </div>
   );
 };

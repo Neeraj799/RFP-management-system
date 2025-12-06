@@ -1,47 +1,25 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import Home from "./pages/Home";
 import { ToastContainer } from "react-toastify";
-import AddTodo from "./pages/AddTodo";
-import { useState } from "react";
-import { useEffect } from "react";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
 import Navbar from "./components/Navbar";
+import CreateRfp from "./pages/CreateRfp";
+import Vendors from "./pages/Vendors";
+import RfpDetails from "./pages/RfpDetails";
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      setIsLoggedIn(true);
-    }
-  }, []);
-
   return (
     <>
       <div>
         <ToastContainer />
-        <Navbar isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />
+        <Navbar />
         <Routes>
-          <Route
-            path="/register"
-            element={<Register setIsLoggedIn={setIsLoggedIn} />}
-          />
-          <Route
-            path="/login"
-            element={<Login setIsLoggedIn={setIsLoggedIn} />}
-          />
+          <>
+            <Route path="/" element={<Home />} />
+            <Route path="/create-rfp" element={<CreateRfp />} />
+            <Route path="/vendors" element={<Vendors />} />
 
-          {isLoggedIn ? (
-            <>
-              <Route path="/" element={<Home />} />
-              <Route path="/add" element={<AddTodo />} />
-            </>
-          ) : (
-            <Route path="*" element={<Navigate to={"/login"} />} />
-          )}
+            <Route path="/rfp/:id" element={<RfpDetails />} />
+          </>
         </Routes>
       </div>
     </>
