@@ -1,4 +1,4 @@
-import Proposal from "../models/Proposal.js";
+import Proposal from "../models/proposal.js";
 import { proposalSchema } from "../validation/proposalValidation.js";
 
 export const createProposal = async (req, res) => {

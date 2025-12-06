@@ -1,5 +1,5 @@
 // backend/controllers/proposalFileController.js
-import Proposal from "../models/Proposal.js";
+import Proposal from "../models/proposal.js";
 import fs from "fs";
 import path from "path";
 

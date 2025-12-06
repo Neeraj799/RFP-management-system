@@ -1,4 +1,4 @@
-import Proposal from "../models/Proposal.js";
+import Proposal from "../models/proposal.js";
 import Rfp from "../models/rfp.js";
 import { compareVendorsWithAI } from "../utils/compareVendorsAi.js";
 import { rfpSchema } from "../validation/rfpValidation.js";
