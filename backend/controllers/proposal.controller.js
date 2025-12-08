@@ -69,7 +69,6 @@ export const listProposals = async (req, res) => {
   }
 };
 
-// fetch proposals for a single RFP (nested route)
 export const getProposalsByRfp = async (req, res) => {
   try {
     const { id: rfpId } = req.params;
