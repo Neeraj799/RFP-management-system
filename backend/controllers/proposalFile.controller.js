@@ -106,7 +106,6 @@ export const createProposalWithFiles = async (req, res) => {
 export const deleteAttachmentFromProposal = async (req, res) => {
   try {
     const { id: proposalId } = req.params;
-    // { url: "http://.../uploads/xyz.pdf" } OR { filename: "xyz.pdf" } in body
     const { url, filename } = req.body;
     if (!url && !filename)
       return res.status(400).json({ error: "url or filename required" });

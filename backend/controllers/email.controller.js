@@ -5,9 +5,6 @@ import fs from "fs/promises";
 import Rfp from "../models/rfp.js";
 import Vendor from "../models/vendor.js";
 
-/**
- * Helper: create transporter from env
- */
 function createTransporter() {
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -20,9 +17,6 @@ function createTransporter() {
   });
 }
 
-/**
- * Build a simple HTML email for the RFP
- */
 function buildRfpHtml(rfp) {
   const itemsHtml = (rfp.lineItems || [])
     .map(
@@ -70,13 +64,6 @@ function buildRfpHtml(rfp) {
   `;
 }
 
-/**
- * POST /api/rfps/:id/send
- * Body options:
- *  - vendorIds: optional array of vendor IDs to send to. If omitted, will use rfp.sentTo (or require vendorIds).
- *  - subject: optional email subject override
- *  - message: optional extra message text to include at top of email.
- */
 export const sendRfpToVendors = async (req, res) => {
   try {
     const { id: rfpId } = req.params;
@@ -112,27 +99,19 @@ export const sendRfpToVendors = async (req, res) => {
     const emailsSent = [];
     const errors = [];
 
-    // optionally attach an RFP file if you store one under rfp.attachments (strings/URLs)
-    // We'll support local uploads stored under backend/uploads (absolute URL or relative)
     const attachmentsForEmail = [];
-    // If RFP has attachments (if you store them), attach them.
+
     if (Array.isArray(rfp.attachments) && rfp.attachments.length > 0) {
       for (const a of rfp.attachments) {
-        // a might be an absolute URL like http://host/uploads/x.pdf or a relative "/uploads/x.pdf"
-        // try to get filename and local path
         const filename = a.split("/").pop();
         const localPath = path.resolve("backend/uploads", filename);
         try {
-          // check file exists
           await fs.access(localPath);
           attachmentsForEmail.push({ filename, path: localPath });
-        } catch (e) {
-          // ignore missing files — they can still be links in the email body
-        }
+        } catch (e) {}
       }
     }
 
-    // send emails one-by-one (could be parallelized)
     for (const v of vendors) {
       if (!v.email) {
         errors.push({ vendorId: v._id, error: "Vendor missing email" });
@@ -163,7 +142,6 @@ export const sendRfpToVendors = async (req, res) => {
       try {
         await transporter.sendMail(mailOptions);
 
-        // record that vendor was sent (use $addToSet to avoid duplicates)
         await Rfp.findByIdAndUpdate(rfpId, {
           $addToSet: { sentTo: v._id },
           $set: { status: "sent" },

@@ -3,10 +3,6 @@ import Vendor from "../models/vendor.js";
 import axios from "axios";
 import { extractAttachmentText } from "../utils/extractAttachmentText.js";
 
-/**
- * Gemini Parsing Helper
- */
-
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
@@ -67,9 +63,6 @@ Vendor text:
   }
 }
 
-/**
- * Inbound Email Webhook Controller
- */
 export const inboundEmail = async (req, res) => {
   try {
     console.log("Inbound webhook summary — keys present:", {
@@ -118,7 +111,6 @@ export const inboundEmail = async (req, res) => {
       });
     }
 
-    // Vendor lookup
     const emailMatch = from.match(/<([^>]+)>/);
     const vendorEmail = (emailMatch?.[1] || from).trim().toLowerCase();
 
@@ -129,9 +121,6 @@ export const inboundEmail = async (req, res) => {
       });
     }
 
-    /**
-     * SIMPLE ATTACHMENT EXTRACTION
-     */
     let attachments = [];
     let attachmentText = "";
 
@@ -153,13 +142,10 @@ export const inboundEmail = async (req, res) => {
       }
     }
 
-    // Combine email + attachment text
     const combinedText = text + attachmentText;
 
-    // Parse with Gemini
     const parsed = await callGeminiAndParseProposal(combinedText);
 
-    // Create proposal
     const proposal = await Proposal.create({
       rfp: rfpId,
       vendor: vendor._id,

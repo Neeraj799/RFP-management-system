@@ -48,7 +48,6 @@ Vendor quote:
 
   if (!raw) throw new Error("Empty response from Gemini");
 
-  // Try direct JSON parse → fallback to substring
   try {
     return JSON.parse(raw);
   } catch (err) {
@@ -73,12 +72,8 @@ export const parseAndCreateProposal = async (req, res) => {
         .json({ error: "rfp and vendor IDs are required to create proposal" });
     }
 
-    // 1) Get parsed proposal JSON from Gemini (reuse your helper)
-    // The helper should return an object with fields like:
-    // { items: [{name, qty, unitPrice?, total? , specs}], totalPrice, currency, deliveryDays, paymentTerms, warranty }
     const parsed = await callGeminiAndParseJSON(text);
 
-    // Normalize parsed output (be defensive)
     const items = Array.isArray(parsed.lineItems || parsed.items)
       ? (parsed.lineItems || parsed.items).map((it) => ({
           name: it.name ?? it.item ?? "",
@@ -112,10 +107,8 @@ export const parseAndCreateProposal = async (req, res) => {
       attachments: [],
     };
 
-    // 2) Save proposal
     const created = await new Proposal(proposalDoc).save();
 
-    // 3) populate vendor and rfp for response
     const populated = await Proposal.findById(created._id).populate(
       "vendor rfp"
     );
